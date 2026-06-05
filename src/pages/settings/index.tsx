@@ -15,6 +15,7 @@ const Settings = () => {
   const sidebarNavItems = [
     { title: "Account", href: PROTECTED_ROUTES.SETTINGS },
     { title: "Appearance", href: PROTECTED_ROUTES.SETTINGS_APPEARANCE },
+    { title: "Security", href: PROTECTED_ROUTES.SETTINGS_SECURITY },
     // { title: "Billings", href: PROTECTED_ROUTES.SETTINGS_BILLING },
   ];
   return (
@@ -22,6 +23,8 @@ const Settings = () => {
       title="Settings"
       subtitle="Manage your account settings and set e-mail preferences."
       addMarginTop
+      className="md:mx-3 md:in-data-[sidebar=collapsed]:mx-auto"
+      headerClassName="md:mx-4 md:in-data-[sidebar=collapsed]:mx-auto"
     >
       <Card className="border shadow-none">
         <CardContent>

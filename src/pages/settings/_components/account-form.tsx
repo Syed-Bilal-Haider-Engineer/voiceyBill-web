@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
+import { getFlagUrl } from "@/lib/currency-flag";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -13,12 +13,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { SingleSelector } from "@/components/ui/single-select";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppDispatch, useTypedSelector } from "@/app/hook";
 import { Loader } from "lucide-react";
 import { useUpdateUserMutation } from "@/features/user/userAPI";
 import { updateCredentials } from "@/features/auth/authSlice";
+import { useGetSupportedCurrenciesQuery } from "@/features/currency/currencyAPI";
+import { ALL_CURRENCIES } from "@/constants/currencies";
 
 const accountFormSchema = z.object({
   name: z
@@ -28,6 +31,7 @@ const accountFormSchema = z.object({
     })
     .optional(),
   profilePicture: z.string(),
+  baseCurrency: z.string().optional(),
 });
 
 type AccountFormValues = z.infer<typeof accountFormSchema>;
@@ -40,21 +44,39 @@ export function AccountForm() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [updateUserMutation, { isLoading }] = useUpdateUserMutation();
+  const { data: currencyData } = useGetSupportedCurrenciesQuery();
+  const currencyOptions = useMemo(() => {
+    const list =
+      currencyData?.currencies && currencyData.currencies.length > 0
+        ? currencyData.currencies
+        : ALL_CURRENCIES;
 
+    return list.map((currency) => {
+      const displaySymbol = currency.symbol.replace(/₨/g, "Rs");
+      const flagUrl = getFlagUrl(currency.code);
+      return {
+        value: currency.code,
+        label: `${displaySymbol} ${currency.code} - ${currency.name}`,
+        flagUrl: flagUrl || "",
+      };
+    });
+  }, [currencyData]);
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: {
       name: user?.name || "",
       profilePicture: user?.profilePicture || "",
+      baseCurrency: user?.baseCurrency || "USD",
     },
   });
 
   // Check if there are any changes
   const hasChanges =
-    form.watch("name") !== user?.name || file !== null;
+    form.watch("name") !== user?.name ||
+    form.watch("baseCurrency") !== (user?.baseCurrency || "USD") ||
+    file !== null;
 
   const onSubmit = (values: AccountFormValues) => {
-
     if (isLoading) return;
 
     // Prevent submission if no changes
@@ -65,6 +87,8 @@ export function AccountForm() {
 
     const formData = new FormData();
     formData.append("name", values.name || "");
+    if (values.baseCurrency)
+      formData.append("baseCurrency", values.baseCurrency);
     if (file) formData.append("profilePicture", file);
 
     updateUserMutation(formData)
@@ -75,8 +99,9 @@ export function AccountForm() {
             user: {
               profilePicture: response.data.profilePicture,
               name: response.data.name,
+              baseCurrency: response.data.baseCurrency,
             },
-          })
+          }),
         );
         toast.success("Account updated successfully");
         setFile(null);
@@ -143,6 +168,25 @@ export function AccountForm() {
               <FormControl>
                 <Input placeholder="Your name" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="baseCurrency"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Base Currency</FormLabel>
+              <SingleSelector
+                value={currencyOptions.find((opt) => opt.value === field.value)}
+                onChange={(option) => field.onChange(option?.value || "")}
+                options={currencyOptions}
+                placeholder="Select currency"
+              />
+              <p className="text-xs text-muted-foreground">
+                All transactions will be converted to this currency.
+              </p>
               <FormMessage />
             </FormItem>
           )}
