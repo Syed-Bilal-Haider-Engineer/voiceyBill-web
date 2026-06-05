@@ -159,17 +159,17 @@ const SingleSelector = React.forwardRef<SingleSelectorRef, SingleSelectorProps>(
       [selected]
     );
 
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-        inputRef.current.blur();
-      }
-    };
+   const handleClickOutside = React.useCallback(
+  (event: Event) => {
+    const target = event.target as Node;
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(target) &&
+      !inputRef.current?.contains(target)
+    ) {
+      setOpen(false);
+    }
+  }, [])
 
     const handleUnselect = React.useCallback(() => {
       // Clear selected value
@@ -195,20 +195,15 @@ const SingleSelector = React.forwardRef<SingleSelectorRef, SingleSelectorProps>(
     }, [open, arrayOptions, groupBy, inputValue]);
 
 
-    useEffect(() => {
-      if (open) {
-        document.addEventListener("mousedown", handleClickOutside);
-        document.addEventListener("touchend", handleClickOutside);
-      } else {
-        document.removeEventListener("mousedown", handleClickOutside);
-        document.removeEventListener("touchend", handleClickOutside);
-      }
+  useEffect(() => {
+  if (!open) return;
 
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-        document.removeEventListener("touchend", handleClickOutside);
-      };
-    }, [open]);
+  document.addEventListener("pointerdown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("pointerdown", handleClickOutside);
+  };
+}, [open, handleClickOutside]);
 
     useEffect(() => {
       if (value !== undefined) {
@@ -445,9 +440,6 @@ const SingleSelector = React.forwardRef<SingleSelectorRef, SingleSelectorProps>(
                 inputProps?.onValueChange?.(value);
               }}
               onBlur={(event) => {
-                if (!onScrollbar) {
-                  setOpen(false);
-                }
                 inputProps?.onBlur?.(event);
               }}
               onFocus={(event) => {
