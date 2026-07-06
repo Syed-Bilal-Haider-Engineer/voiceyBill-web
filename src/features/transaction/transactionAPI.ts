@@ -1,4 +1,5 @@
 import { apiClient } from "@/app/api-client";
+import type { AppDispatch } from "@/app/hook";
 import {
   AIScanReceiptResponse,
   BulkImportTransactionPayload,
@@ -10,6 +11,9 @@ import {
 } from "./transationType";
 
 type UndoPatch = { undo: () => void };
+// The state shape `selectInvalidatedBy` needs — this is exactly what the
+// mutation lifecycle's `getState()` provides (the RTK Query api slice).
+type ApiRootState = Parameters<typeof apiClient.util.selectInvalidatedBy>[0];
 
 /**
  * Optimistically remove the given transaction ids from every cached
@@ -18,8 +22,8 @@ type UndoPatch = { undo: () => void };
  * patch handles so the caller can roll the rows back if the delete is rejected.
  */
 const pruneTransactionCaches = (
-  dispatch: (action: any) => UndoPatch,
-  getState: () => any,
+  dispatch: AppDispatch,
+  getState: () => ApiRootState,
   ids: Set<string>,
 ): UndoPatch[] => {
   const patches: UndoPatch[] = [];
