@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Sidebar from "@/components/sidebar";
 import { HeaderBar } from "@/components/navbar/header-bar";
 import { Outlet } from "react-router-dom";
+import PageFallback from "@/components/page-fallback";
 import EditTransactionDrawer from "@/components/transaction/edit-transaction-drawer";
 import AddTransactionDrawer from "@/components/transaction/add-transaction-drawer";
 import LogoutDialog from "@/components/navbar/logout-dialog";
@@ -31,7 +32,9 @@ const AppLayoutInner = () => {
           onSidebarToggle={() => setSidebarCollapsed((v) => !v)}
         />
         <main className="w-full flex-1 flex flex-col">
-          <Outlet />
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <AddTransactionDrawer hideTrigger />

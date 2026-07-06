@@ -8,10 +8,20 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { PlusIcon, XIcon, FileTextIcon, ScanTextIcon, MicIcon } from "lucide-react";
-import TransactionForm from "./transaction-form";
+import { PlusIcon, XIcon, FileTextIcon, ScanTextIcon, MicIcon, Loader } from "lucide-react";
+import { Suspense, lazy } from "react";
 import { cn } from "@/lib/utils";
 import useAddTransactionDrawer from "@/hooks/use-add-transaction-drawer";
+
+// Heavy (voice + receipt scanner); code-split so it only loads when the drawer
+// is actually opened.
+const TransactionForm = lazy(() => import("./transaction-form"));
+
+const FormFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+  </div>
+);
 
 type TransactionMode = "voice" | "scan" | "manual";
 
@@ -69,9 +79,13 @@ const AddTransactionDrawer = ({ hideTrigger = false }: { hideTrigger?: boolean }
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {mode === "manual" && <TransactionForm onCloseDrawer={onCloseDrawer} mode="manual" />}
-          {mode === "scan" && <TransactionForm onCloseDrawer={onCloseDrawer} mode="scan" />}
-          {mode === "voice" && <TransactionForm onCloseDrawer={onCloseDrawer} mode="voice" />}
+          {open && (
+            <Suspense fallback={<FormFallback />}>
+              {mode === "manual" && <TransactionForm onCloseDrawer={onCloseDrawer} mode="manual" />}
+              {mode === "scan" && <TransactionForm onCloseDrawer={onCloseDrawer} mode="scan" />}
+              {mode === "voice" && <TransactionForm onCloseDrawer={onCloseDrawer} mode="voice" />}
+            </Suspense>
+          )}
         </div>
       </DrawerContent>
     </Drawer>

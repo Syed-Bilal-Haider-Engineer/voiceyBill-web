@@ -1,3 +1,5 @@
+import { Suspense, lazy } from "react";
+import { Loader } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -5,8 +7,17 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import TransactionForm from "./transaction-form";
 import useEditTransactionDrawer from "@/hooks/use-edit-transaction-drawer";
+
+// The transaction form (with the voice recorder + receipt scanner) is heavy and
+// only needed once a drawer is opened, so it's code-split out of the app shell.
+const TransactionForm = lazy(() => import("./transaction-form"));
+
+const FormFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+  </div>
+);
 
 const EditTransactionDrawer = () => {
   const { open, transactionId, onCloseDrawer } = useEditTransactionDrawer();
@@ -22,11 +33,15 @@ const EditTransactionDrawer = () => {
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex-1 overflow-y-auto">
-          <TransactionForm
-            isEdit
-            transactionId={transactionId}
-            onCloseDrawer={onCloseDrawer}
-          />
+          {open && (
+            <Suspense fallback={<FormFallback />}>
+              <TransactionForm
+                isEdit
+                transactionId={transactionId}
+                onCloseDrawer={onCloseDrawer}
+              />
+            </Suspense>
+          )}
         </div>
       </DrawerContent>
     </Drawer>

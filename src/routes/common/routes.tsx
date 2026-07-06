@@ -1,22 +1,27 @@
+import { lazy } from "react";
 import { AUTH_ROUTES, PROTECTED_ROUTES, PUBLIC_ROUTES } from "./routePath";
-import SignIn from "@/pages/auth/sign-in";
-import SignUp from "@/pages/auth/sign-up";
-import VerifyEmail from "@/pages/auth/verify-email";
-import ForgotPassword from "@/pages/auth/forgot-password";
-import VerifyResetPassword from "@/pages/auth/verify-reset-password";
-import SetNewPassword from "@/pages/auth/set-new-password";
-import ResetPassword from "@/pages/auth/reset-password";
-import Home from "@/pages/home";
-import Dashboard from "@/pages/dashboard";
-import Transactions from "@/pages/transactions";
-import Reports from "@/pages/reports";
-import Budget from "@/pages/budget";
-import Settings from "@/pages/settings";
-import Account from "@/pages/settings/account";
-import Appearance from "@/pages/settings/appearance";
-import Billing from "@/pages/settings/billing";
-import Security from "@/pages/settings/security";
-import Categories from "@/pages/settings/categories";
+
+// Route pages are code-split so the initial bundle only ships the shell + the
+// first page the user lands on. Heavy pages (dashboard charts, reports, budget)
+// and their libraries load on demand and are cached per-chunk afterwards.
+const SignIn = lazy(() => import("@/pages/auth/sign-in"));
+const SignUp = lazy(() => import("@/pages/auth/sign-up"));
+const VerifyEmail = lazy(() => import("@/pages/auth/verify-email"));
+const ForgotPassword = lazy(() => import("@/pages/auth/forgot-password"));
+const VerifyResetPassword = lazy(() => import("@/pages/auth/verify-reset-password"));
+const SetNewPassword = lazy(() => import("@/pages/auth/set-new-password"));
+const ResetPassword = lazy(() => import("@/pages/auth/reset-password"));
+const Home = lazy(() => import("@/pages/home"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Transactions = lazy(() => import("@/pages/transactions"));
+const Reports = lazy(() => import("@/pages/reports"));
+const Budget = lazy(() => import("@/pages/budget"));
+const Settings = lazy(() => import("@/pages/settings"));
+const Account = lazy(() => import("@/pages/settings/account"));
+const Appearance = lazy(() => import("@/pages/settings/appearance"));
+const Billing = lazy(() => import("@/pages/settings/billing"));
+const Security = lazy(() => import("@/pages/settings/security"));
+const Categories = lazy(() => import("@/pages/settings/categories"));
 
 export const publicRoutePaths = [
   { path: PUBLIC_ROUTES.HOME, element: <Home /> },
