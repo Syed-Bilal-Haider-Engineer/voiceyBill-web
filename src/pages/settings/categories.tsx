@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   useDeleteCategoryMutation,
   useGetCategoriesQuery,
@@ -9,21 +10,45 @@ import {
 import type { Category } from "@/features/category/categoryType";
 import CategoryForm from "./_components/category-form";
 
+const CategoriesSkeleton = () => (
+  <div className="space-y-2">
+    {Array.from({ length: 6 }).map((_, i) => (
+      <div
+        key={i}
+        className="flex items-center justify-between rounded-lg border px-4 py-3"
+      >
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-4 w-4 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="flex items-center gap-1">
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <Skeleton className="h-8 w-8 rounded-md" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const Categories = () => {
   const { data, isLoading } = useGetCategoriesQuery();
-  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
+  const [deleteCategory] = useDeleteCategoryMutation();
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const categories = data?.data ?? [];
 
   const handleDelete = (category: Category) => {
+    if (deletingId) return;
     if (!confirm(`Delete "${category.name}"? Existing transactions will move to "Uncategorized".`)) return;
 
+    setDeletingId(category._id);
     deleteCategory(category._id)
       .unwrap()
       .then(() => toast.success("Category deleted"))
-      .catch((err) => toast.error(err?.data?.message || "Failed to delete category"));
+      .catch((err) => toast.error(err?.data?.message || "Failed to delete category"))
+      .finally(() => setDeletingId(null));
   };
 
   const handleEdit = (category: Category) => {
@@ -33,14 +58,6 @@ const Categories = () => {
   const handleDone = () => {
     setEditingCategory(null);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -55,46 +72,58 @@ const Categories = () => {
         <CategoryForm category={editingCategory} onDone={handleDone} />
       )}
 
-      <div className="space-y-2">
-        {categories.map((cat) => (
-          <div
-            key={cat._id}
-            className="flex items-center justify-between rounded-lg border px-4 py-3"
-          >
-            <div className="flex items-center gap-3">
-              <span
-                className="w-4 h-4 rounded-full flex-shrink-0"
-                style={{ backgroundColor: cat.color }}
-              />
-              <span className="text-sm font-medium">{cat.name}</span>
-              {cat.isDefault && (
-                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                  default
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => handleEdit(cat)}
+      {isLoading ? (
+        <CategoriesSkeleton />
+      ) : (
+        <div className="space-y-2">
+          {categories.map((cat) => {
+            const isRowDeleting = deletingId === cat._id;
+            return (
+              <div
+                key={cat._id}
+                className="flex items-center justify-between rounded-lg border px-4 py-3"
               >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDelete(cat)}
-                disabled={isDeleting}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="text-sm font-medium">{cat.name}</span>
+                  {cat.isDefault && (
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                      default
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => handleEdit(cat)}
+                    disabled={isRowDeleting}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(cat)}
+                    disabled={isRowDeleting}
+                  >
+                    {isRowDeleting ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
