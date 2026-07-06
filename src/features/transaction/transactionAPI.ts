@@ -1,4 +1,5 @@
 import { apiClient } from "@/app/api-client";
+import type { AppDispatch } from "@/app/hook";
 import {
   AIScanReceiptResponse,
   BulkImportTransactionPayload,
@@ -8,6 +9,54 @@ import {
   GetSingleTransactionResponse,
   UpdateTransactionPayload,
 } from "./transationType";
+
+type UndoPatch = { undo: () => void };
+// The state shape `selectInvalidatedBy` needs — this is exactly what the
+// mutation lifecycle's `getState()` provides (the RTK Query api slice).
+type ApiRootState = Parameters<typeof apiClient.util.selectInvalidatedBy>[0];
+
+/**
+ * Optimistically remove the given transaction ids from every cached
+ * `getAllTransactions` list so a deleted row disappears instantly — in sync with
+ * the success toast — instead of lingering until a refetch completes. Returns the
+ * patch handles so the caller can roll the rows back if the delete is rejected.
+ */
+const pruneTransactionCaches = (
+  dispatch: AppDispatch,
+  getState: () => ApiRootState,
+  ids: Set<string>,
+): UndoPatch[] => {
+  const patches: UndoPatch[] = [];
+  const entries = transactionApi.util.selectInvalidatedBy(getState(), [
+    "transactions",
+  ]);
+  for (const { endpointName, originalArgs } of entries) {
+    if (endpointName !== "getAllTransactions") continue;
+    patches.push(
+      dispatch(
+        transactionApi.util.updateQueryData(
+          "getAllTransactions",
+          originalArgs as GetAllTransactionParams,
+          (draft: GetAllTransactionResponse) => {
+            if (!draft.transactions) return;
+            const before = draft.transactions.length;
+            draft.transactions = draft.transactions.filter(
+              (t) => !ids.has(t._id) && !(t.id && ids.has(t.id)),
+            );
+            const removed = before - draft.transactions.length;
+            if (draft.pagination && removed > 0) {
+              draft.pagination.totalCount = Math.max(
+                0,
+                (draft.pagination.totalCount || 0) - removed,
+              );
+            }
+          },
+        ),
+      ),
+    );
+  }
+  return patches;
+};
 
 export const transactionApi = apiClient.injectEndpoints({
   endpoints: (builder) => ({
@@ -108,6 +157,14 @@ export const transactionApi = apiClient.injectEndpoints({
         url: `/transaction/delete/${id}`,
         method: "DELETE",
       }),
+      async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
+        const patches = pruneTransactionCaches(dispatch, getState, new Set([id]));
+        try {
+          await queryFulfilled;
+        } catch {
+          patches.forEach((p) => p.undo());
+        }
+      },
       invalidatesTags: ["transactions", "analytics", "budget"],
     }),
 
@@ -119,6 +176,18 @@ export const transactionApi = apiClient.injectEndpoints({
           transactionIds,
         },
       }),
+      async onQueryStarted(transactionIds, { dispatch, getState, queryFulfilled }) {
+        const patches = pruneTransactionCaches(
+          dispatch,
+          getState,
+          new Set(transactionIds),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patches.forEach((p) => p.undo());
+        }
+      },
       invalidatesTags: ["transactions", "analytics", "budget"],
     }),
     // exportTransactions: builder.query<

@@ -14,8 +14,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import CurrencyInputField from "@/components/ui/currency-input";
-import { CATEGORIES } from "@/constant";
 import { useUpsertBudgetMutation } from "@/features/budget/budgetAPI";
+import { useGetCategoriesQuery } from "@/features/category/categoryAPI";
 import { BudgetSummary } from "@/features/budget/budgetType";
 import { AIScanReceiptData } from "@/features/transaction/transationType";
 import { getCategoryIcon } from "@/lib/category-icons";
@@ -92,8 +92,19 @@ const BudgetForm = ({
     (c) => c.code === baseCurrency
   )?.symbol ?? "$";
 
+  // Single source of truth: the user's categories (default + custom),
+  // managed only in Settings → Categories.
+  const { data: categoriesResponse } = useGetCategoriesQuery();
+  const categories = useMemo(
+    () =>
+      (categoriesResponse?.data ?? [])
+        .filter((c) => c.name?.trim())
+        .map((c) => ({ value: c.name, label: c.name })),
+    [categoriesResponse]
+  );
+
   const defaultCategoryValues = useMemo(() => {
-    return CATEGORIES.reduce<Record<string, string>>((acc, category) => {
+    return categories.reduce<Record<string, string>>((acc, category) => {
       const existingCategory = budget?.categories.find(
         (item) => item.name === category.value
       );
@@ -102,7 +113,7 @@ const BudgetForm = ({
         : "";
       return acc;
     }, {});
-  }, [budget?.categories]);
+  }, [budget?.categories, categories]);
 
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
@@ -129,7 +140,7 @@ const BudgetForm = ({
         .join(" ")
     );
 
-    return CATEGORIES.find((category) => {
+    return categories.find((category) => {
       const value = normalizeText(category.value);
       const label = normalizeText(category.label);
       return (
@@ -256,7 +267,7 @@ const BudgetForm = ({
             </div>
 
             <div className="grid gap-3">
-              {CATEGORIES.map((category) => {
+              {categories.map((category) => {
                 const Icon = getCategoryIcon(category.value);
                 return (
                   <FormField

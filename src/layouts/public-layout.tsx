@@ -1,9 +1,13 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
+import PageFallback from "@/components/page-fallback";
 
 const PublicLayout = () => {
   return (
     <div className="w-full h-auto">
-      <Outlet />
+      <Suspense fallback={<PageFallback />}>
+        <Outlet />
+      </Suspense>
     </div>
   );
 };
