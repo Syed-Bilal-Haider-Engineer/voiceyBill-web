@@ -102,6 +102,8 @@ const Categories = () => {
                     className="h-8 w-8"
                     onClick={() => handleEdit(cat)}
                     disabled={isRowDeleting}
+                    aria-label={`Edit ${cat.name}`}
+                    title={`Edit ${cat.name}`}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -111,6 +113,8 @@ const Categories = () => {
                     className="h-8 w-8 text-destructive hover:text-destructive"
                     onClick={() => handleDelete(cat)}
                     disabled={isRowDeleting}
+                    aria-label={`Delete ${cat.name}`}
+                    title={`Delete ${cat.name}`}
                   >
                     {isRowDeleting ? (
                       <Loader className="h-4 w-4 animate-spin" />
